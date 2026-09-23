@@ -26,23 +26,58 @@ def extract_symbol(text: str):
 def format_signal(symbol: str, data: dict) -> str:
     top = data["signal"]
     bias, state, score = top["bias"], top["state"], top["confluence_score"]
-    lines = [f"*{symbol}* — Top-Down SMC/ICT Analysis", "",
-              f"Bias: *{bias}*", f"Setup state: *{state}* (confluence {score}/5)", ""]
-    if top["reasons"]:
-        lines.append("Reasoning:")
-        lines += [f"• {r}" for r in top["reasons"]]
-        lines.append("")
+    reasons = top["reasons"]
     refs = top["references"]
-    if refs.get("potential_entry_zone"):
-        lines.append(f"Potential entry zone reference: {refs['potential_entry_zone']}")
-    if refs.get("invalidation_reference"):
-        lines.append(f"Invalidation reference: {refs['invalidation_reference']}")
-    if refs.get("liquidity_references"):
-        lines.append("Nearby liquidity references:")
-        lines += [f"• {lvl['price']} ({lvl['type']})" for lvl in refs["liquidity_references"]]
-    lines.append("")
-    lines.append("_Analysis only — not an executable entry/SL/TP instruction._")
-    return "\n".join(lines)
+
+    parts = [f"*{symbol}* — Top-Down SMC/ICT Analysis", ""]
+
+    if bias not in ("Bullish", "Bearish"):
+        parts.append(
+            f"{symbol} ku ipo clean ah oru HTF bias illa — market ranging ah irukku, "
+            f"clear direction edhுவும் kaanala. Structure clarify aagura varaikkum wait pannுறathu better."
+        )
+        return "\n".join(parts)
+
+    tone = "Bullish" if bias == "Bullish" else "Bearish"
+
+    story = f"{symbol} la bigger picture *{tone}* nu leaning aagிறுthu. "
+    if reasons:
+        joined_reasons = reasons[0][0].lower() + reasons[0][1:]
+        story += f"Idhுக்கு காரணம் — {joined_reasons}"
+        for r in reasons[1:]:
+            story += f", innoru side la {r[0].lower()}{r[1:]}"
+        story += ". "
+
+    state_line = {
+        "High confluence": "Ipo palaVidhamana factors ellame ஒண்ணா align aagி irukku, so idhு normal setup ah விட konjam strong ah irukku",
+        "Developing": "Setup innும் form aagிறuthu — konjam pieces ready ah irukku, ana innும் fully confirm aagala",
+        "No complete setup": "Ana ippozhudhaikku full setup edhுவும் illa, so idhு entry trigger illa, heads-up mattum thaan",
+    }.get(state, state)
+    story += f"{state_line} (confluence {score}/5)."
+    parts.append(story)
+    parts.append("")
+
+    ez = refs.get("potential_entry_zone")
+    if ez:
+        ez_type = ez.get("type", "zone")
+        low, high = ez.get("low"), ez.get("high")
+        if low is not None and high is not None:
+            parts.append(f"Price mattum back வந்தா, watch pண்ணனும்னா {ez_type} zone — {low} to {high} range la than.")
+        else:
+            parts.append(f"Price mattum back வந்தா, watch pண்ணனும்னா {ez_type} zone — {ez.get('price', 'n/a')} area la than.")
+
+    inv = refs.get("invalidation_reference")
+    if inv is not None:
+        parts.append(f"Idhு ellame {inv} level structure hold pண்ணுthu nu than base pண்ணி sollura — andha level break aana, {tone.lower()} view invalid aagும்.")
+
+    liq = refs.get("liquidity_references")
+    if liq:
+        levels_text = ", ".join(f"{lvl['price']}" for lvl in liq)
+        parts.append(f"Adhுக்கு mேலே, {levels_text} arugila liquidity irukku — real move varradhுக்கு munnadi idhை magnet ah touch pண்ணலாம்.")
+
+    parts.append("")
+    parts.append("_Analysis only — executable entry/SL/TP instruction illa._")
+    return "\n".join(parts)
 
 def send_message(chat_id, text: str):
     try:
